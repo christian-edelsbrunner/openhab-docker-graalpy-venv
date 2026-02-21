@@ -2,8 +2,8 @@
 Custom openHAB Docker image that layers GraalPy tooling (Python scripting add-on) on top of `openhab/openhab:5.1.2-debian`.
 
 ## Image details
-- installs the GraalPy community runtime that matches the built-in OpenHAB GraalVM version (default `25.0.1`);
-- keeps the runtime in `/opt/graalpy` and exposes it on `PATH` so Python scripting can find the interpreter and libraries;
+- installs the GraalPy community runtime that matches the built-in OpenHAB GraalVM version (currently `25.0.1` for openhzab 5.1.2);
+- keeps the runtime in `/opt/graalpy`
 - wraps the base entrypoint (`docker-entrypoint.sh`) to ensure the GraalPy virtual environment under `/openhab/userdata/cache/org.openhab.automation.pythonscripting/venv` (override with `PYTHON_VENV_PATH`) is initialized on every startup, even if `/openhab/userdata` is mounted from the host; this keeps the helper libs and native modules installable via pip;
 - includes tooling such as `patchelf` needed for GraalPy to support native extensions.
 
