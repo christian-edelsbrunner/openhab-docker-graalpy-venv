@@ -25,3 +25,8 @@ You can override `GRAALPY_VERSION`, `GRAALPY_DIST`, or `OPENHAB_BASE_TAG` via `-
 - Create a Git tag that exactly equals the OpenHAB base image tag (for example, `git tag 5.1.2-debian`), then push it with `git push origin --tags`. The release workflow reads that tag as `OPENHAB_BASE_TAG`, builds against `openhab/openhab:<tag>`, and labels the image accordingly.
 - The release job pushes both `ghcr.io/<OWNER>/openhab-graalpy:<tag>` (1:1 mirror of the upstream tag) and `ghcr.io/<OWNER>/openhab-graalpy:latest` so testers can always pull the most recent release in addition to the explicit versioned tag.
 - You can also trigger the release job manually via the workflow dispatch input if you need to rebuild a specific OpenHAB tag without pushing a Git tag.
+
+## Automated GraalPy venv smoke test
+
+`./run-test.sh` builds the enhanced OpenHAB image, mounts the `test-config` python rules/items, waits for the REST API, and then runs `tests/check_venv.py` on the host to confirm that `SimpleItem` was updated and the `requests`-powered rule reported HTTP `200`. The script tears down the compose stack afterward and prints a concise pass/fail message.
+
