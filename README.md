@@ -11,7 +11,7 @@ Currently only supports OpenHAB 5.1.3
   2. **venv-builder**: downloads the matching GraalPy community JVM distribution, creates a venv under `/openhab/python/venv`, and installs all packages from `requirements.txt` — compiled against the same glibc as the base image
   3. **final image**: copies only the finished venv + required runtime libs from the builder; no build toolchain ends up in the image
 - keeps the GraalPy runtime and venv in `/openhab/python/`
-- uses the openHAB container's **`/etc/cont-init.d/` hook mechanism** (s6-overlay) instead of wrapping the entrypoint: `cont-init.d/10-graalpy-venv.sh` symlinks the pre-built venv into `/openhab/userdata/cache/org.openhab.automation.pythonscripting/venv` on every container start, even when `/openhab/userdata` is a mounted host volume
+- uses the openHAB container's **`/etc/cont-init.d/` hook mechanism** (s6-overlay): `cont-init.d/10-graalpy-venv.sh` symlinks the pre-built venv into `/openhab/userdata/cache/org.openhab.automation.pythonscripting/venv` on every container start, even when `/openhab/userdata` is a mounted host volume
 - includes runtime libs such as `patchelf` needed for GraalPy native extensions
 
 ## Adding Python packages
