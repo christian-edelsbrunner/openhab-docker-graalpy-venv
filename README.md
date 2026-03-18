@@ -37,7 +37,7 @@ The GraalPy version is detected automatically from the addons KAR of the chosen 
 
 The workflow `.github/workflows/build-image.yml` runs every Sunday at 3am and can also be triggered manually via `workflow_dispatch`. It:
 
-1. Fetches the 10 most recent `*-debian` tags from Docker Hub (`openhab/openhab`)
+1. Fetches the 10 most recent `X.Y.Z-debian` release tags from Docker Hub (`openhab/openhab`) — RC, milestone and snapshot tags are excluded because their addons KAR is not published on GitHub Releases
 2. Builds each tag in a matrix job using `BASE_IMAGE=openhab/openhab:<tag>`
 3. Pushes to GHCR as `ghcr.io/<owner>/openhab-docker-graalpy-venv:<tag>` and updates `:latest`
 
