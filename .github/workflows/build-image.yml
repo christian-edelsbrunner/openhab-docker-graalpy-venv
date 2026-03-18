@@ -17,7 +17,7 @@ jobs:
           # openHAB Docker Hub images mit "debian" im Tag
           TAGS=$(curl -s 'https://registry.hub.docker.com/v2/repositories/openhab/openhab/tags?page_size=100' \
             | jq -r '.results[] | select(.name | contains("debian")) | .name' \
-            | sort -V | tail -10 | jq -R . | jq -s .)
+            | sort -V | tail -10 | jq -R . | jq -sc .)
 
           echo "tags=$TAGS" >> $GITHUB_OUTPUT
           echo "Found tags: $TAGS"
