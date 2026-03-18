@@ -59,6 +59,7 @@ RUN /openhab/python/venv/bin/pip install -r /openhab/requirements.txt
 FROM ${BASE_IMAGE}
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    patchelf \
     libstdc++6 libgfortran5 \
     libssl3 libffi8 \
     libpq5 \
