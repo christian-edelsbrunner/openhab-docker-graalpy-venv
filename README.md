@@ -1,30 +1,47 @@
 # openhab-docker-graalpy-venv
 
 ## Description
-OpenHab docker image that automatically create a python venv using graalpy ready to be used with https://www.openhab.org/addons/automation/pythonscripting/
+OpenHab docker image that automatically creates a pre-built GraalPy venv ready to be used with https://www.openhab.org/addons/automation/pythonscripting/
 
-Currently only supports OpenHAB 5.1.2
+Currently only supports OpenHAB 5.1.3
 
 ## Image details
-- installs the GraalPy community runtime that matches the built-in OpenHAB GraalVM version (currently `25.0.1` for openhzab 5.1.2) - as documented at https://www.openhab.org/addons/automation/pythonscripting/ 
-- keeps the runtime in `/opt/graalpy`
-- wraps the base entrypoint (`docker-entrypoint.sh`) to ensure the GraalPy virtual environment under `/openhab/userdata/cache/org.openhab.automation.pythonscripting/venv` (override with `PYTHON_VENV_PATH`) is initialized on every startup, even if `/openhab/userdata` is mounted from the host; this keeps the helper libs and native modules installable via pip;
-- includes tooling such as `patchelf` needed for GraalPy to support native extensions.
+- uses a **3-stage multi-stage build**:
+  1. **graal-detector**: extracts the exact GraalPy version bundled in the openHAB addons KAR so the runtime and the scripting addon always match
+  2. **venv-builder**: downloads the matching GraalPy community JVM distribution, creates a venv under `/openhab/python/venv`, and installs all packages from `requirements.txt` — compiled against the same glibc as the base image
+  3. **final image**: copies only the finished venv + required runtime libs from the builder; no build toolchain ends up in the image
+- keeps the GraalPy runtime and venv in `/openhab/python/`
+- uses the openHAB container's **`/etc/cont-init.d/` hook mechanism** (s6-overlay): `cont-init.d/10-graalpy-venv.sh` symlinks the pre-built venv into `/openhab/userdata/cache/org.openhab.automation.pythonscripting/venv` on every container start, even when `/openhab/userdata` is a mounted host volume
+- includes runtime libs such as `patchelf` needed for GraalPy native extensions
+
+## Adding Python packages
+
+Add the desired packages to `requirements.txt` — they get installed into the venv at image build time.
+
+GraalPy supports only a subset of packages from PyPI. For packages with native extensions, the build can take a very long time if no pre-built wheel is available. Before adding a package, check which versions have pre-built GraalPy wheels:
+https://www.graalvm.org/python/compatibility/
+
+Prefer pinning to a version listed there as "supported" to avoid compiling from source during the Docker build.
 
 ## Building locally
 ```bash
 docker build -t openhab-graalpy .
 ```
-You can override `GRAALPY_VERSION`, `GRAALPY_DIST`, or `OPENHAB_BASE_TAG` via `--build-arg` when you need a different GraalPy release or OpenHAB base image.
+To target a different openHAB version, pass `BASE_IMAGE`:
+```bash
+docker build --build-arg BASE_IMAGE=openhab/openhab:5.1.3-debian -t openhab-graalpy .
+```
+The GraalPy version is detected automatically from the addons KAR of the chosen openHAB version — no manual version pinning needed.
 
-## GitHub Actions
-`.github/workflows/build-image.yml` uses Docker Buildx to build the image on pushes to `main`, caches layers, and pushes `ghcr.io/<OWNER>/openhab-graalpy:latest` plus a numeric run number. A separate release job listens for Git tags (and manual `workflow_dispatch` runs) so you can mirror the OpenHAB tag one-to-one when publishing.
+## GitHub Actions / Published images
 
-## Release process
-- Update the Dockerfile (GraalPy version, helper tooling, docs, etc.) so it matches the OpenHAB release you want to mirror, then commit those changes on `main`.
-- Create a Git tag that exactly equals the OpenHAB base image tag (for example, `git tag 5.1.2-debian`), then push it with `git push origin --tags`. The release workflow reads that tag as `OPENHAB_BASE_TAG`, builds against `openhab/openhab:<tag>`, and labels the image accordingly.
-- The release job pushes both `ghcr.io/<OWNER>/openhab-graalpy:<tag>` (1:1 mirror of the upstream tag) and `ghcr.io/<OWNER>/openhab-graalpy:latest` so testers can always pull the most recent release in addition to the explicit versioned tag.
-- You can also trigger the release job manually via the workflow dispatch input if you need to rebuild a specific OpenHAB tag without pushing a Git tag.
+The workflow `.github/workflows/build-image.yml` runs every Sunday at 3am and can also be triggered manually via `workflow_dispatch`. It:
+
+1. Fetches the 10 most recent `X.Y.Z-debian` release tags from Docker Hub (`openhab/openhab`) — only openHAB 5.x and later (Python scripting was introduced in 5.0); RC, milestone and snapshot tags are excluded because their addons KAR is not published on GitHub Releases
+2. Builds each tag in a matrix job using `BASE_IMAGE=openhab/openhab:<tag>`
+3. Pushes to GHCR as `ghcr.io/<owner>/openhab-docker-graalpy-venv:<tag>` and updates `:latest`
+
+The GraalPy version is auto-detected per build from the addons KAR — no manual pinning needed when openHAB updates.
 
 ## Automated GraalPy venv smoke test
 

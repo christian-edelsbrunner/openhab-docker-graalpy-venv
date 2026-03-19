@@ -2,6 +2,7 @@
 """Host-side smoke test for the GraalPy venv and python rules."""
 
 import errno
+import http.client
 import json
 import sys
 import time
@@ -12,7 +13,7 @@ import urllib.request
 BASE_URL = "http://localhost:8080/rest"
 
 
-def wait_for_openhab(timeout: float = 120.0, interval: float = 5.0) -> None:
+def wait_for_openhab(timeout: float = 300.0, interval: float = 5.0) -> None:
     end = time.monotonic() + timeout
 
     while time.monotonic() < end:
@@ -21,10 +22,14 @@ def wait_for_openhab(timeout: float = 120.0, interval: float = 5.0) -> None:
             with urllib.request.urlopen(req, timeout=5):
                 print("OpenHAB REST API is available")
                 return
-        except urllib.error.URLError: 
+        except urllib.error.URLError as exc:
+            # URLError wraps most connection errors; check reason for reset
+            if isinstance(exc.reason, ConnectionResetError):
+                print("OpenHAB REST API resetting the connection while starting; retrying")
             time.sleep(interval)
-        except OSError as exc:
-            if exc.errno == errno.ECONNRESET:
+        except (OSError, http.client.RemoteDisconnected) as exc:
+            # RemoteDisconnected is a ConnectionResetError subclass but errno is None
+            if isinstance(exc, ConnectionResetError) or exc.errno == errno.ECONNRESET:
                 print("OpenHAB REST API resetting the connection while starting; retrying")
                 time.sleep(interval)
                 continue
